@@ -5,6 +5,8 @@ import {type ChangeEvent, type FormEvent, useState} from 'react';
 import {logout, storeFile} from '../platform/browser';
 import {
   type Abilities,
+  type EventEnquiriesPage,
+  type EventEnquiry,
   type Job,
   JOB_TYPES,
   type JobsPage,
@@ -88,7 +90,13 @@ const NAV_GROUPS: {
       {to: '/members', label: 'Members'},
     ],
   },
-  {label: 'Manage', items: [{to: '/jobs', label: 'Jobs', ability: 'manageJobs'}]},
+  {
+    label: 'Manage',
+    items: [
+      {to: '/enquiries', label: 'Event enquiries', ability: 'manageEvents'},
+      {to: '/jobs', label: 'Jobs', ability: 'manageJobs'},
+    ],
+  },
 ];
 
 /** The screen's title for the top bar: the deepest sidebar item it is under. */
@@ -120,7 +128,7 @@ const rootRoute = createRootRoute({
       <div className="app-shell" data-nav-open={open ? '' : undefined}>
         <aside className="app-sidebar">
           <a className="app-brand" href="/">
-            {site.data?.site?.name ?? 'Community'}
+            {site.data?.site?.name ?? 'Pach Vai'}
           </a>
           <nav aria-label="Dashboard" onClick={() => setOpen(false)}>
             {NAV_GROUPS.map(group => {
@@ -238,13 +246,14 @@ const overviewRoute = createRoute({
     const me = useMe();
     const viewer = me.data?.viewer;
     const manageJobs = me.data?.abilities.manageJobs ?? false;
+    const manageEvents = me.data?.abilities.manageEvents ?? false;
     const health = useQuery({
       queryKey: ['health'],
       queryFn: () =>
         read<{preview: boolean; database: boolean; communityKey: boolean}>(api.health.$get()),
     });
-    // Under the screens' query keys (['uploads'], ['jobs']): a save there
-    // invalidates these too, so the numbers never go stale.
+    // Under the screens' query keys (['uploads'], ['jobs'], ['enquiries']): a
+    // save there invalidates these too, so the numbers never go stale.
     const uploads = useQuery({
       queryKey: ['uploads', 'first'],
       queryFn: () =>
@@ -254,6 +263,11 @@ const overviewRoute = createRoute({
       queryKey: ['jobs', 'manage', 'first'],
       queryFn: () => read<JobsPage>(api.jobs.manage.$get({query: {before: undefined}})),
       enabled: manageJobs,
+    });
+    const enquiries = useQuery({
+      queryKey: ['enquiries', 'first'],
+      queryFn: () => read<EventEnquiriesPage>(api.events.$get({query: {before: undefined}})),
+      enabled: manageEvents,
     });
     const recent = uploads.data?.uploads.slice(0, 5) ?? [];
 
@@ -283,6 +297,13 @@ const overviewRoute = createRoute({
             value={pageCount(uploads.data?.uploads, Boolean(uploads.data?.nextBefore))}
             to="/uploads"
           />
+          {manageEvents && (
+            <Stat
+              label="Event enquiries"
+              value={pageCount(enquiries.data?.enquiries, Boolean(enquiries.data?.nextBefore))}
+              to="/enquiries"
+            />
+          )}
           {manageJobs && (
             <Stat
               label="Jobs"
@@ -498,6 +519,99 @@ const membersRoute = createRoute({
             variant="ghost"
             onClick={() => members.fetchNextPage()}
             pending={members.isFetchingNextPage}
+            pendingLabel="Loading…">
+            Load more
+          </Button>
+        )}
+      </div>
+    );
+  },
+});
+
+/** Site admins: read and action `/events` enquiries (`MANAGE_EVENTS`). */
+const enquiriesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/enquiries',
+  component: function Enquiries() {
+    const queryClient = useQueryClient();
+    const enquiries = useInfiniteQuery({
+      queryKey: ['enquiries'],
+      initialPageParam: undefined as string | undefined,
+      queryFn: ({pageParam}) =>
+        read<EventEnquiriesPage>(api.events.$get({query: {before: pageParam}})),
+      getNextPageParam: last => (last.nextBefore ? String(last.nextBefore) : undefined),
+    });
+    const setStatus = useMutation({
+      mutationFn: ({id, status}: {id: number; status: string}) =>
+        read<{enquiry: EventEnquiry}>(api.events[':id'].$patch({param: {id: String(id)}, json: {status}})),
+      onSuccess: () => queryClient.invalidateQueries({queryKey: ['enquiries']}),
+    });
+    const rows = enquiries.data?.pages.flatMap(page => page.enquiries) ?? [];
+
+    return (
+      <div className="app-page">
+        <div className="app-page-head">
+          <h2>Event enquiries</h2>
+        </div>
+        <p className="muted">
+          Submitted from <a href="/events">/events</a>. Call back and mark as contacted once you have.
+        </p>
+
+        {enquiries.error && <ErrorNote error={enquiries.error} />}
+        {enquiries.isPending && <p className="muted">Loading…</p>}
+        {rows.length === 0 && enquiries.isSuccess && (
+          <div className="app-empty">
+            <p className="muted">No enquiries yet.</p>
+          </div>
+        )}
+        <ul className="inbox">
+          {rows.map(enquiry => {
+            const busy = setStatus.isPending && setStatus.variables?.id === enquiry.id;
+            return (
+              <li key={enquiry.id} aria-busy={busy || undefined}>
+                <div className="app-card-head">
+                  <strong>{enquiry.name}</strong>
+                  <span className={`chip ${enquiry.status === 'contacted' ? '' : 'chip-tag'}`}>
+                    {enquiry.status === 'contacted' ? 'Contacted' : 'New'}
+                  </span>
+                </div>
+                <p className="meta">
+                  <a href={`tel:${enquiry.phone}`}>{enquiry.phone}</a>
+                  {enquiry.email && (
+                    <>
+                      {' · '}
+                      <a href={`mailto:${enquiry.email}`}>{enquiry.email}</a>
+                    </>
+                  )}
+                  {' · '}
+                  {when(enquiry.createdAt)}
+                </p>
+                <p>{enquiry.message}</p>
+                <div className="row-actions">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    pending={busy}
+                    pendingLabel="Saving…"
+                    onClick={() =>
+                      setStatus.mutate({
+                        id: enquiry.id,
+                        status: enquiry.status === 'contacted' ? 'new' : 'contacted',
+                      })
+                    }>
+                    {enquiry.status === 'contacted' ? 'Mark as new' : 'Mark as contacted'}
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        {setStatus.error && <ErrorNote error={setStatus.error} />}
+        {enquiries.hasNextPage && (
+          <Button
+            variant="ghost"
+            onClick={() => enquiries.fetchNextPage()}
+            pending={enquiries.isFetchingNextPage}
             pendingLabel="Loading…">
             Load more
           </Button>
@@ -749,5 +863,6 @@ export const routeTree = rootRoute.addChildren([
   overviewRoute,
   uploadsRoute,
   membersRoute,
+  enquiriesRoute,
   jobsRoute,
 ]);

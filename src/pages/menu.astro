@@ -1,0 +1,47 @@
+---
+import {MENU} from '../content/site';
+import Base from '../layouts/Base.astro';
+import {staticContext} from '../server/page';
+
+export const prerender = true;
+
+const {site, viewer} = await staticContext(Astro.request);
+---
+
+<Base site={site} viewer={viewer} title="Menu" description={MENU.intro.body}>
+  <main class="wrap narrow section">
+    <p class="eyebrow">{MENU.intro.eyebrow}</p>
+    <h1>{MENU.intro.title}</h1>
+    <p class="lede">{MENU.intro.body}</p>
+
+    <div class="actions">
+      <a class="button" href="/visit">Book a table</a>
+      <a class="button ghost" href="/events">Private dining</a>
+    </div>
+
+    <div class="menu-sections">
+      {
+        MENU.sections.map(section => (
+          <section class="menu-section">
+            <div class="menu-section-head">
+              <h2>{section.name}</h2>
+            </div>
+            {section.note && <p class="menu-section-note">{section.note}</p>}
+            {section.items.map(item => (
+              <div class="menu-item">
+                <div class="menu-item-text">
+                  <p class="menu-item-name">
+                    {item.name}
+                    {item.badge && <span class="badge">{item.badge}</span>}
+                  </p>
+                  <p class="menu-item-body">{item.body}</p>
+                </div>
+                <span class="menu-item-price">{item.price}</span>
+              </div>
+            ))}
+          </section>
+        ))
+      }
+    </div>
+  </main>
+</Base>

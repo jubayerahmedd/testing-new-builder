@@ -1,0 +1,91 @@
+---
+import {VISIT} from '../content/site';
+import Base from '../layouts/Base.astro';
+import {staticContext} from '../server/page';
+
+export const prerender = true;
+
+const FAQ = [
+  {
+    q: 'Do I need to book a table?',
+    a: 'No — bookings are not mandatory and we welcome walk-ins at any hour. Call ahead only if you would like a table held for a large group.',
+  },
+  {
+    q: 'Are you really open 24 hours?',
+    a: 'Yes, every day of the week, including public holidays.',
+  },
+  {
+    q: 'Is the food halal?',
+    a: 'Yes, the entire menu is halal.',
+  },
+  {
+    q: 'Do you deliver or offer takeaway?',
+    a: 'Takeaway is available at the counter. Call ahead and your order will be ready when you arrive.',
+  },
+];
+
+const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(VISIT.address.mapsQuery)}&output=embed`;
+const directionsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(VISIT.address.mapsQuery)}`;
+
+const {site, viewer} = await staticContext(Astro.request);
+---
+
+<Base site={site} viewer={viewer} title="Visit us" description={VISIT.lede}>
+  <main>
+    <section class="wrap section">
+      <p class="eyebrow">{VISIT.eyebrow}</p>
+      <h1>{VISIT.title}</h1>
+      <p class="lede">{VISIT.lede}</p>
+
+      <div class="visit-grid">
+        <div>
+          <img class="photo-frame" src={VISIT.image.src} alt={VISIT.image.alt} loading="eager" />
+        </div>
+        <div>
+          <h2 class="visit-heading">{VISIT.address.line1}</h2>
+          <p class="prose">{VISIT.address.line2}</p>
+
+          <ul class="hours-list">
+            {
+              VISIT.hours.map(row => (
+                <li>
+                  <span class="hours-day">{row.day}</span>
+                  <span class="hours-time">{row.time}</span>
+                </li>
+              ))
+            }
+          </ul>
+
+          <ul class="contact-list">
+            <li><a href={VISIT.address.phoneHref}>Call {VISIT.address.phone}</a></li>
+            <li><a href={directionsHref} target="_blank" rel="noopener noreferrer">Get directions →</a></li>
+          </ul>
+
+          <div class="actions">
+            <a class="button" href={VISIT.address.phoneHref}>Call to book a table</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="map-frame">
+        <iframe src={mapSrc} title="Map showing Pach Vai's location" loading="lazy" referrerpolicy="no-referrer-when-downgrade" />
+      </div>
+    </section>
+
+    <section class="section-band">
+      <div class="wrap narrow section">
+        <h2 class="section-head-center">Good to know</h2>
+        <div class="faq">
+          {
+            FAQ.map(item => (
+              <details class="faq-item">
+                <summary>{item.q}</summary>
+                <p>{item.a}</p>
+              </details>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+  </main>
+</Base>

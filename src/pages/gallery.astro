@@ -1,0 +1,29 @@
+---
+import {GALLERY} from '../content/site';
+import Base from '../layouts/Base.astro';
+import {staticContext} from '../server/page';
+
+export const prerender = true;
+
+const {site, viewer} = await staticContext(Astro.request);
+---
+
+<Base site={site} viewer={viewer} title="Gallery" description={GALLERY.lede}>
+  <main class="wrap section">
+    <p class="eyebrow">{GALLERY.eyebrow}</p>
+    <h1>{GALLERY.title}</h1>
+    <p class="lede">{GALLERY.lede}</p>
+
+    <div class="gallery-grid">
+      {
+        GALLERY.photos.map(photo => (
+          <img class="gallery-item" src={photo.src} alt={photo.alt} loading="lazy" />
+        ))
+      }
+    </div>
+
+    <div class="actions">
+      <a class="button" href="/visit">Come see it yourself</a>
+    </div>
+  </main>
+</Base>

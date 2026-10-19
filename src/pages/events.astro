@@ -1,0 +1,229 @@
+---
+/**
+ * Events & private dining. The enquiry form posts to `POST /site-api/events`
+ * (public, no sign-in needed — like a contact form) and is stored in the
+ * Site Database; admins read it at `/portal/enquiries`.
+ *
+ * No React here: this is a public, static page, so the form validates with
+ * plain JS, following the same rules as the portal's forms (AGENTS.md
+ * "Buttons and forms"): `novalidate`, errors shown in place on blur/submit,
+ * the button pending while it sends, the result shown without a page reload.
+ */
+import {EVENTS} from '../content/site';
+import Base from '../layouts/Base.astro';
+import {staticContext} from '../server/page';
+
+export const prerender = true;
+
+const {site, viewer} = await staticContext(Astro.request);
+---
+
+<Base site={site} viewer={viewer} title="Events & private dining" description={EVENTS.lede}>
+  <main>
+    <section class="wrap section">
+      <div class="visit-grid">
+        <div class="hero-text">
+          <p class="eyebrow">{EVENTS.eyebrow}</p>
+          <h1>{EVENTS.title}</h1>
+          <p class="lede">{EVENTS.lede}</p>
+        </div>
+        <div>
+          <img class="photo-frame" src={EVENTS.image.src} alt={EVENTS.image.alt} loading="eager" />
+        </div>
+      </div>
+    </section>
+
+    <section class="section-band">
+      <div class="wrap section">
+        <h2 class="section-head-center">What we host</h2>
+        <div class="offer-grid">
+          {
+            EVENTS.offerings.map(item => (
+              <div class="value-item">
+                <h3>{item.title}</h3>
+                <p class="muted">{item.body}</p>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap section">
+      <div class="visit-grid">
+        <div>
+          <h2 class="visit-heading">What's included</h2>
+          <ul class="included-list">
+            {EVENTS.included.map(line => <li>{line}</li>)}
+          </ul>
+        </div>
+
+        <div class="app-card form-card">
+          <div>
+            <h3>{EVENTS.form.heading}</h3>
+            <p class="muted">{EVENTS.form.body}</p>
+          </div>
+
+          <form id="enquiry-form" novalidate>
+            <div class="form-grid">
+              <div class="field full hp" aria-hidden="true">
+                <label for="f-company">Company</label>
+                <input id="f-company" name="company" type="text" tabindex="-1" autocomplete="off" />
+              </div>
+
+              <div class="field">
+                <label for="f-name">Your name</label>
+                <input id="f-name" name="name" type="text" autocomplete="name" maxlength="100" aria-describedby="f-name-error" />
+                <p class="field-error" id="f-name-error" role="alert" hidden></p>
+              </div>
+
+              <div class="field">
+                <label for="f-phone">Phone number</label>
+                <input id="f-phone" name="phone" type="tel" autocomplete="tel" maxlength="30" aria-describedby="f-phone-error" />
+                <p class="field-error" id="f-phone-error" role="alert" hidden></p>
+              </div>
+
+              <div class="field full">
+                <label for="f-email">Email <span class="muted">(optional)</span></label>
+                <input id="f-email" name="email" type="email" autocomplete="email" maxlength="254" aria-describedby="f-email-error" />
+                <p class="field-error" id="f-email-error" role="alert" hidden></p>
+              </div>
+
+              <div class="field full">
+                <label for="f-message">Tell us about your event</label>
+                <textarea id="f-message" name="message" rows="5" maxlength="2000" aria-describedby="f-message-hint f-message-error"></textarea>
+                <p class="field-hint" id="f-message-hint">Occasion, date, and roughly how many guests.</p>
+                <p class="field-error" id="f-message-error" role="alert" hidden></p>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="button" type="submit" id="enquiry-submit">Send enquiry</button>
+            </div>
+          </form>
+          <p class="form-status" id="enquiry-status" role="status" hidden></p>
+        </div>
+      </div>
+    </section>
+  </main>
+</Base>
+
+<script>
+  /**
+   * Plain-JS validation mirroring `src/portal/ui.tsx`'s `useForm`: an error
+   * shows under its field after blur or a submit attempt (never while the
+   * visitor is still typing their first value), and the submit button is
+   * pending — and cannot be pressed twice — while the request is in flight.
+   * The server (`src/server/routes/events.ts`) validates again regardless.
+   */
+  const form = document.querySelector<HTMLFormElement>('#enquiry-form');
+  if (form) {
+    const submitButton = form.querySelector<HTMLButtonElement>('#enquiry-submit');
+    const status = form.querySelector<HTMLParagraphElement>('#enquiry-status');
+    const fields = {
+      name: form.querySelector<HTMLInputElement>('#f-name')!,
+      phone: form.querySelector<HTMLInputElement>('#f-phone')!,
+      email: form.querySelector<HTMLInputElement>('#f-email')!,
+      message: form.querySelector<HTMLTextAreaElement>('#f-message')!,
+    };
+    const touched = new Set<string>();
+    let submitted = false;
+
+    const rules: Record<keyof typeof fields, (value: string) => string | null> = {
+      name: value => (value.trim() ? null : 'Enter your name.'),
+      phone: value => (value.trim() ? null : 'Enter a phone number we can reach you on.'),
+      email: value =>
+        !value.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+          ? null
+          : 'Enter a valid email address, or leave it blank.',
+      message: value =>
+        value.trim().length >= 10 ? null : 'Tell us a little about your event (at least 10 characters).',
+    };
+
+    const showError = (name: keyof typeof fields, message: string | null) => {
+      const input = fields[name];
+      const error = form.querySelector<HTMLElement>(`#f-${name}-error`);
+      if (!error) return;
+      if (message && (touched.has(name) || submitted)) {
+        error.textContent = message;
+        error.hidden = false;
+        input.setAttribute('aria-invalid', 'true');
+      } else {
+        error.hidden = true;
+        input.removeAttribute('aria-invalid');
+      }
+    };
+
+    const validate = (name: keyof typeof fields) => {
+      const message = rules[name](fields[name].value);
+      showError(name, message);
+      return message === null;
+    };
+
+    (Object.keys(fields) as (keyof typeof fields)[]).forEach(name => {
+      fields[name].addEventListener('blur', () => {
+        touched.add(name);
+        validate(name);
+      });
+      fields[name].addEventListener('input', () => {
+        if (touched.has(name) || submitted) validate(name);
+      });
+    });
+
+    const setBusy = (busy: boolean) => {
+      if (!submitButton) return;
+      submitButton.disabled = busy;
+      submitButton.setAttribute('aria-busy', String(busy));
+      submitButton.textContent = busy ? 'Sending…' : 'Send enquiry';
+    };
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      submitted = true;
+      const names = Object.keys(fields) as (keyof typeof fields)[];
+      const valid = names.map(validate).every(Boolean);
+      if (!valid) {
+        const firstInvalid = names.find(name => !validate(name));
+        fields[firstInvalid ?? names[0]].focus();
+        return;
+      }
+
+      setBusy(true);
+      if (status) {
+        status.textContent = '';
+        status.hidden = true;
+        status.removeAttribute('data-tone');
+      }
+      try {
+        const body = {
+          company: (form.querySelector<HTMLInputElement>('#f-company')?.value ?? '').trim(),
+          name: fields.name.value.trim(),
+          phone: fields.phone.value.trim(),
+          email: fields.email.value.trim() || undefined,
+          message: fields.message.value.trim(),
+        };
+        const res = await fetch('/site-api/events', {
+          method: 'POST',
+          headers: {'content-type': 'application/json'},
+          body: JSON.stringify(body),
+        });
+        const data = (await res.json().catch(() => null)) as {message?: string} | null;
+        if (!res.ok) throw new Error(data?.message ?? 'Something went wrong. Please try again.');
+        form.hidden = true;
+        if (status) {
+          status.textContent = 'Thank you — we will call you back to confirm.';
+          status.dataset.tone = 'ok';
+          status.hidden = false;
+        }
+      } catch (err) {
+        if (status) {
+          status.textContent = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+          status.dataset.tone = 'error';
+          status.hidden = false;
+        }
+      } finally {
+        setBusy(false);
+      }
+    });
+  }
+</script>

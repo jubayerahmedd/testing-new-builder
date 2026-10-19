@@ -4,6 +4,7 @@ import type {Abilities} from '../lib/types';
 import {config} from '../platform/config';
 import {problem, sameOrigin} from '../platform/guards';
 import {isPreview} from '../platform/api';
+import {eventRoutes, MANAGE_EVENTS} from './routes/events';
 import {jobRoutes, MANAGE_JOBS} from './routes/jobs';
 import {memberRoutes} from './routes/members';
 import {postRoutes} from './routes/posts';
@@ -25,6 +26,7 @@ import {getViewer, getViewerPermissions, grants} from '../platform/viewer';
  *   GET  /site          the community's brand                 routes/site.ts
  *   *    /posts/...     the community's blog (public API)      routes/posts.ts
  *   *    /jobs/...      the job board (Site Database)          routes/jobs.ts
+ *   *    /events/...    private-dining enquiries (Site Database) routes/events.ts
  *   GET  /members      members directory (Community Key)      routes/members.ts
  *   *    /uploads       a member's files (Site Database)       routes/uploads.ts
  *
@@ -55,13 +57,17 @@ export const app = new Hono()
     ]);
     c.header('Cache-Control', 'private, no-store');
     const permissions = viewer.state === 'member' ? perms : new Set<string>();
-    const abilities: Abilities = {manageJobs: grants(permissions, MANAGE_JOBS)};
+    const abilities: Abilities = {
+      manageJobs: grants(permissions, MANAGE_JOBS),
+      manageEvents: grants(permissions, MANAGE_EVENTS),
+    };
     return c.json({viewer, abilities});
   })
 
   .route('/site', siteRoutes)
   .route('/posts', postRoutes)
   .route('/jobs', jobRoutes)
+  .route('/events', eventRoutes)
   .route('/members', memberRoutes)
   .route('/uploads', uploadRoutes)
 

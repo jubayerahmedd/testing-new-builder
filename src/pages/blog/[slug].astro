@@ -21,7 +21,7 @@ const [found, related] = await Promise.all([
 ]);
 const post = found?.post ?? null;
 if (!post) Astro.response.status = 404;
-const name = site?.name ?? 'Community';
+const name = site?.name ?? 'Pach Vai';
 ---
 
 {
@@ -63,8 +63,8 @@ const name = site?.name ?? 'Community';
 
         {viewer.state !== 'member' && (
           <aside class="article-cta">
-            <h2>Enjoyed this? Join {name}</h2>
-            <p class="muted">Get the conversation, the events and every new post.</p>
+            <h2>Enjoyed this story?</h2>
+            <p class="muted">Join {name} for first word on new dishes, events and every new post.</p>
             <a class="button" href={`/register?redirectTo=${encodeURIComponent(Astro.url.pathname)}`}>Join for free</a>
           </aside>
         )}

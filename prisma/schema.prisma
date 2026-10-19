@@ -71,3 +71,22 @@ model Upload {
   @@index([profileId, id])
   @@map("uploads")
 }
+
+/// A private-dining / event enquiry submitted from `/events`. Anyone may send
+/// one (no sign-in needed); site admins (`community:site:update`) read and
+/// action them from `/portal/enquiries`.
+model EventEnquiry {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  /// An https or mailto contact is never required: a phone number is enough.
+  phone       String   @db.VarChar(30)
+  email       String?  @db.VarChar(254)
+  /// Free text: occasion, guest count, preferred date — kept as written.
+  message     String   @db.VarChar(2000)
+  /// `new` or `contacted`.
+  status      String   @default("new") @db.VarChar(12)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([status, id])
+  @@map("event_enquiries")
+}

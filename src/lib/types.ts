@@ -73,6 +73,24 @@ export interface JobsPage {
 /** What the visitor may do on THIS site (derived from their Role Manager codenames). */
 export interface Abilities {
   manageJobs: boolean;
+  manageEvents: boolean;
+}
+
+export interface EventEnquiry {
+  id: number;
+  name: string;
+  phone: string;
+  email: string | null;
+  message: string;
+  /** `new` or `contacted`. */
+  status: string;
+  createdAt: string;
+}
+
+export interface EventEnquiriesPage {
+  enquiries: EventEnquiry[];
+  /** Pass back as `?before=` for the next page; null on the last one. */
+  nextBefore: number | null;
 }
 
 export interface Member {

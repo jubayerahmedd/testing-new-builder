@@ -4,86 +4,121 @@
  * work per visit) and made of sections. Words in `src/content/site.ts`.
  *
  * What changes often is filled in by the browser after load, from the Site API:
- *   - the visitor (`<Base isStatic>`): members see "Open the community"
- *     (`data-member-only`), guests "Join" (`data-guest-only`)
- *   - latest posts and open roles (`data-live` sections, below)
+ *   - the visitor (`<Base isStatic>`): members see "Your dashboard"
+ *     (`data-member-only`), guests "Join the table" (`data-guest-only`)
+ *   - latest news (a `data-live` section, below)
  * A section with no data stays hidden.
  */
-import BrandMark from '../components/BrandMark.astro';
-import {HOME, withName} from '../content/site';
+import {HOME} from '../content/site';
 import Base from '../layouts/Base.astro';
 import {staticContext} from '../server/page';
 
 export const prerender = true;
 
 const {site, viewer} = await staticContext(Astro.request);
-const name = site?.name ?? 'Community';
 ---
 
 <Base site={site} viewer={viewer} isStatic>
   <main>
     <section class="hero">
-      <div class="wrap center">
-        <BrandMark site={site} size={72} />
-        <p class="eyebrow" data-brand-text={HOME.hero.eyebrow}>{withName(HOME.hero.eyebrow, name)}</p>
-        <h1>{HOME.hero.title}</h1>
-        <p class="lede">{HOME.hero.body}</p>
-        {/* Join, Log in and the feed are the community app: plain links, always. */}
-        <div class="actions" data-guest-only>
-          <a class="button" href="/register" data-brand-text="Join {name}">Join {name}</a>
-          <a class="button ghost" href="/login">Log in</a>
+      <div class="wrap hero-inner">
+        <div class="hero-text">
+          <p class="eyebrow">{HOME.hero.eyebrow}</p>
+          <h1>{HOME.hero.title}</h1>
+          <p class="lede">{HOME.hero.body}</p>
+          <div class="actions" data-guest-only>
+            <a class="button large" href="/visit">Book a table</a>
+            <a class="button ghost large" href="/menu">See the menu</a>
+          </div>
+          <div class="actions" data-member-only hidden>
+            <a class="button large" href="/visit">Book a table</a>
+            <a class="button ghost large" href="/portal">Your dashboard</a>
+          </div>
+          <ul class="fact-strip">
+            {
+              HOME.strip.map(fact => (
+                <li>
+                  <span class="fact-label">{fact.label}</span>
+                  <span class="fact-value">{fact.value}</span>
+                </li>
+              ))
+            }
+          </ul>
         </div>
-        <div class="actions" data-member-only hidden>
-          <a class="button" href="/feeds">Open the community</a>
-          <a class="button ghost" href="/portal">Your dashboard</a>
+        <div class="hero-image">
+          <img class="photo-frame hero-photo" src={HOME.heroImage.src} alt={HOME.heroImage.alt} loading="eager" />
         </div>
       </div>
     </section>
 
     <section class="wrap section">
-      <h2 class="center">{HOME.features.title}</h2>
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">{HOME.specials.eyebrow}</p>
+          <h2>{HOME.specials.title}</h2>
+        </div>
+        <a href="/menu">Full menu →</a>
+      </div>
+      <p class="lede section-intro">{HOME.specials.body}</p>
       <div class="grid grid-3">
         {
-          HOME.features.items.map(feature => (
-            <div class="card">
-              <h3>{feature.title}</h3>
-              <p class="muted">{feature.body}</p>
-            </div>
+          HOME.specials.items.map(dish => (
+            <article class="special-card">
+              <img class="special-photo" src={dish.image.src} alt={dish.image.alt} loading="lazy" />
+              <div class="special-body">
+                <div class="special-head">
+                  <h3>{dish.name}</h3>
+                  <span class="special-price">{dish.price}</span>
+                </div>
+                {dish.badge && <span class="badge">{dish.badge}</span>}
+                <p class="muted">{dish.body}</p>
+              </div>
+            </article>
           ))
         }
       </div>
     </section>
 
-    <section class="wrap section" data-live="posts" hidden>
-      <div class="section-head">
-        <h2>Latest from the blog</h2>
-        <a href="/blog">All posts →</a>
-      </div>
-      <div class="grid grid-3" data-list></div>
-    </section>
-
-    <section class="wrap section" data-live="jobs" hidden>
-      <div class="section-head">
-        <h2>Open roles</h2>
-        <a href="/jobs">All jobs →</a>
-      </div>
-      <ul class="job-list" data-list></ul>
-    </section>
-
-    <section class="wrap narrow section center">
-      <blockquote class="quote">
-        <p>“{HOME.quote.text}”</p>
-        <cite>— {HOME.quote.author}</cite>
-      </blockquote>
-    </section>
-
-    <section class="wrap section" data-guest-only>
-      <div class="card cta">
-        <div>
-          <h2 data-brand-text={HOME.cta.title}>{withName(HOME.cta.title, name)}</h2>
-          <p class="muted">{HOME.cta.body}</p>
+    <section class="section-band">
+      <div class="wrap section" data-live="posts" hidden>
+        <div class="section-head">
+          <h2>From the kitchen</h2>
+          <a href="/blog">All stories →</a>
         </div>
-        <a class="button" href="/register">Join now</a>
+        <div class="grid grid-3" data-list></div>
+      </div>
+    </section>
+
+    <section class="wrap section">
+      <div class="section-head-center">
+        <p class="eyebrow">{HOME.reviews.eyebrow}</p>
+        <h2>{HOME.reviews.title}</h2>
+      </div>
+      <div class="grid grid-3">
+        {
+          HOME.reviews.items.map(review => (
+            <figure class="review-card">
+              <blockquote class="review-quote">{review.quote}</blockquote>
+              <figcaption class="review-byline">
+                <div>
+                  <strong>{review.author}</strong>
+                  <span class="muted small">{review.role}</span>
+                </div>
+              </figcaption>
+            </figure>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="band-dark">
+      <div class="wrap section center">
+        <h2>{HOME.cta.title}</h2>
+        <p class="lede">{HOME.cta.body}</p>
+        <div class="actions">
+          <a class="button large" href="/visit">Get directions &amp; call</a>
+          <a class="button ghost large" href="/menu">Browse the menu</a>
+        </div>
       </div>
     </section>
   </main>
@@ -91,7 +126,7 @@ const name = site?.name ?? 'Community';
 
 <script>
   import {formatDate} from '../lib/format';
-  import type {JobsPage, PostsPage} from '../lib/types';
+  import type {PostsPage} from '../lib/types';
 
   /** One element with text: never HTML from an answer. */
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text = '') => {
@@ -135,20 +170,5 @@ const name = site?.name ?? 'Community';
       list.append(card);
     }
     return data.posts.length;
-  });
-
-  void live<JobsPage>('jobs', '/site-api/jobs', (data, list) => {
-    for (const job of data.jobs.slice(0, 3)) {
-      const row = el('a', 'job-row');
-      row.href = `/jobs/${encodeURIComponent(job.slug)}`;
-      const text = el('div');
-      text.append(el('h3', '', job.title), el('p', 'muted', `${job.company} · ${job.location}`));
-      row.append(text);
-      if (job.remote) row.append(el('span', 'chip chip-tag', 'Remote'));
-      const item = el('li');
-      item.append(row);
-      list.append(item);
-    }
-    return Math.min(3, data.jobs.length);
   });
 </script>

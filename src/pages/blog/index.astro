@@ -21,7 +21,7 @@ const result = await read<PostsPage>(
   api.posts.$get({query: {page: String(page), perPage: String(PER_PAGE), search}})
 );
 const posts = result?.posts ?? [];
-const name = site?.name ?? 'Community';
+const name = site?.name ?? 'Pach Vai';
 const href = (n: number) => {
   const params = new URLSearchParams();
   if (search) params.set('search', search);
@@ -32,12 +32,12 @@ const href = (n: number) => {
 const [featured, ...rest] = page === 1 && !search ? posts : [null, ...posts];
 ---
 
-<Base site={site} viewer={viewer} title="Blog" description={`Stories and updates from ${name}.`}>
+<Base site={site} viewer={viewer} title="Blog" description={`News and stories from ${name}.`}>
   <main class="pub">
     <header class="pub-masthead">
       <BrandMark site={site} size={64} />
       <h1>{name}</h1>
-      <p class="pub-tagline">Stories, guides and updates from the community.</p>
+      <p class="pub-tagline">News, recipes and stories from the kitchen.</p>
       {
         viewer.state !== 'member' && (
           <a class="button" href="/register?redirectTo=%2Fblog">

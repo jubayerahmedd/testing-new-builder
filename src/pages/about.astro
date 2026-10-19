@@ -1,6 +1,5 @@
 ---
-import BrandMark from '../components/BrandMark.astro';
-import {ABOUT, withName} from '../content/site';
+import {ABOUT} from '../content/site';
 import Base from '../layouts/Base.astro';
 import {staticContext} from '../server/page';
 
@@ -8,25 +7,64 @@ import {staticContext} from '../server/page';
 export const prerender = true;
 
 const {site, viewer} = await staticContext(Astro.request);
-const name = site?.name ?? 'Community';
 ---
 
-<Base site={site} viewer={viewer} isStatic title="About" description={withName(ABOUT.lede, name)}>
-  <main class="wrap narrow section">
-    <BrandMark site={site} size={56} />
-    <h1 data-brand-text={ABOUT.title}>{withName(ABOUT.title, name)}</h1>
-    <p class="lede">{withName(ABOUT.lede, name)}</p>
-    {
-      ABOUT.sections.map(section => (
-        <section class="about-section">
-          <h2>{section.heading}</h2>
-          <p>{withName(section.body, name)}</p>
-        </section>
-      ))
-    }
-    <div class="actions">
-      <a class="button" href="/register?redirectTo=%2Fabout" data-brand-text="Join {name}">Join {name}</a>
-      <a class="button ghost" href="/blog">Read the blog</a>
-    </div>
+<Base site={site} viewer={viewer} title="About" description={ABOUT.lede}>
+  <main>
+    <section class="wrap narrow section">
+      <p class="eyebrow">About us</p>
+      <h1>{ABOUT.title}</h1>
+      <p class="lede">{ABOUT.lede}</p>
+    </section>
+
+    <section class="section-band">
+      <div class="wrap narrow section">
+        <h2>{ABOUT.story.heading}</h2>
+        {ABOUT.story.paragraphs.map(paragraph => <p class="prose">{paragraph}</p>)}
+      </div>
+    </section>
+
+    <section class="wrap section">
+      <h2 class="center section-head-center">{ABOUT.values.heading}</h2>
+      <div class="values-grid">
+        {
+          ABOUT.values.items.map(value => (
+            <div class="value-item">
+              <h3>{value.title}</h3>
+              <p class="muted">{value.body}</p>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="wrap section">
+      <div class="section-head-center">
+        <h2>{ABOUT.team.heading}</h2>
+        <p class="lede">{ABOUT.team.body}</p>
+      </div>
+      <div class="team-grid">
+        {
+          ABOUT.team.members.map(member => (
+            <div class="team-card">
+              <img class="team-photo" src={member.photo} alt={member.name} loading="lazy" />
+              <p class="team-name">{member.name}</p>
+              <p class="team-role">{member.role}</p>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="band-dark">
+      <div class="wrap section center">
+        <h2>{ABOUT.cta.title}</h2>
+        <p class="lede">{ABOUT.cta.body}</p>
+        <div class="actions">
+          <a class="button large" href="/visit">Find us</a>
+          <a class="button ghost large" href="/menu">See the menu</a>
+        </div>
+      </div>
+    </section>
   </main>
 </Base>

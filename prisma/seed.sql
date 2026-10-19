@@ -16,3 +16,13 @@ FROM (VALUES
    'https://example.com/careers/writer')
 ) AS v(slug, title, company, location, type, remote, description, apply_url)
 WHERE NOT EXISTS (SELECT 1 FROM "jobs");
+
+INSERT INTO "event_enquiries" ("name", "phone", "email", "message", "status")
+SELECT v.name, v.phone, v.email, v.message, v.status
+FROM (VALUES
+  ('Example Guest', '+8801700000001', 'guest@example.com',
+   'Looking to book the private room for a birthday, around 30 guests, a Friday evening.', 'new'),
+  ('Sample Office', '+8801700000002', NULL,
+   'Weekly lunch order for ~15 people, every Thursday. Can we set up a standing order?', 'contacted')
+) AS v(name, phone, email, message, status)
+WHERE NOT EXISTS (SELECT 1 FROM "event_enquiries");
