@@ -74,11 +74,23 @@ const back = encodeURIComponent(`${path}${Astro.url.search}`);
           <span class="nav-toggle-bar" aria-hidden="true"></span>
         </button>
         <nav class="site-nav" id="site-nav" aria-label="Main">
-          {NAV.map(item => (
-            <a href={item.href} class:list={{active: active(item.href)}}>
-              {item.label}
-            </a>
-          ))}
+          {NAV.map(item =>
+            item.href === '/blog' ? (
+              <div class="nav-item-has-drop">
+                <a href={item.href} class:list={{active: active(item.href)}} aria-haspopup="true">
+                  {item.label}
+                  <span class="nav-drop-caret" aria-hidden="true">▾</span>
+                </a>
+                <div class="nav-drop" data-blog-drop role="menu" aria-label="Blog posts">
+                  <a class="nav-drop-view-all" href="/blog" role="menuitem">View all posts</a>
+                </div>
+              </div>
+            ) : (
+              <a href={item.href} class:list={{active: active(item.href)}}>
+                {item.label}
+              </a>
+            )
+          )}
           <a
             href="/portal"
             class:list={{active: active('/portal')}}
@@ -166,6 +178,54 @@ const back = encodeURIComponent(`${path}${Astro.url.search}`);
         } catch {
           // Storage blocked: nothing to clear.
         }
+      }
+
+      // Blog nav dropdown: fetch recent posts and show them as sub-links.
+      const blogDrop = document.querySelector<HTMLElement>('[data-blog-drop]');
+      if (blogDrop) {
+        const dropParent = blogDrop.closest<HTMLElement>('.nav-item-has-drop');
+        let loaded = false;
+
+        const loadPosts = async () => {
+          if (loaded) return;
+          loaded = true;
+          try {
+            const res = await fetch('/site-api/posts?perPage=8');
+            const data: {posts?: {slug: string; title: string}[]} = res.ok ? await res.json() : {};
+            const posts = data.posts ?? [];
+            if (posts.length === 0) return;
+            const frag = document.createDocumentFragment();
+            const hr = document.createElement('hr');
+            hr.className = 'nav-drop-divider';
+            hr.setAttribute('aria-hidden', 'true');
+            frag.appendChild(hr);
+            for (const post of posts) {
+              const a = document.createElement('a');
+              a.href = `/blog/${encodeURIComponent(post.slug)}`;
+              a.setAttribute('role', 'menuitem');
+              a.textContent = post.title;
+              frag.appendChild(a);
+            }
+            blogDrop.appendChild(frag);
+          } catch {
+            // Leave "View all posts" link only.
+          }
+        };
+
+        // Desktop: load lazily on first hover.
+        dropParent?.addEventListener('mouseenter', loadPosts);
+
+        // Mobile: tap the Blog link to expand/collapse the submenu.
+        dropParent?.querySelector('a')?.addEventListener('click', e => {
+          if (window.innerWidth > 860) return;
+          e.preventDefault();
+          void loadPosts();
+          if (dropParent.hasAttribute('data-drop-open')) {
+            dropParent.removeAttribute('data-drop-open');
+          } else {
+            dropParent.setAttribute('data-drop-open', '');
+          }
+        });
       }
 
       // The phone nav: a ghost menu button toggles the link list open/closed.
